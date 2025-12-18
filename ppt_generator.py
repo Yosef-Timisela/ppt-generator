@@ -8,18 +8,37 @@ import io
 import uuid
 
 # =============================================
-# EXPERT LEVEL PPT GENERATOR (AI-READY & DATA)
+# EXPERT PPT GENERATOR — PPT THEME UPLOAD & AUTO SUGGESTION
 # =============================================
 
-st.set_page_config(page_title="Expert PPT Generator", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="Expert PPT Generator", page_icon="🎨", layout="wide")
 
 # ------------------------------
 # SESSION STATE
 # ------------------------------
 if "slides" not in st.session_state:
     st.session_state.slides = []
-if "projects" not in st.session_state:
-    st.session_state.projects = {}
+if "themes" not in st.session_state:
+    st.session_state.themes = {}
+
+# ------------------------------
+# HELPER FUNCTIONS
+# ------------------------------
+def load_theme_ppt(ppt_file):
+    prs = Presentation(ppt_file)
+    return prs.slide_width, prs.slide_height, prs.slide_layouts
+
+
+def suggest_theme(slides):
+    """Simple rule-based theme suggestion"""
+    text_count = sum(1 for s in slides if s['type'] == 'Text')
+    chart_count = sum(1 for s in slides if 'Chart' in s['type'])
+
+    if chart_count > text_count:
+        return "Business"
+    if text_count > chart_count:
+        return "Minimal"
+    return "Creative"
 
 # ------------------------------
 # CUSTOM CSS
@@ -28,112 +47,103 @@ st.markdown("""
 <style>
 .main {background-color:#eef2f7;}
 .card {background:white;padding:1.2rem;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.08);margin-bottom:1rem;}
-.preview {background-size:cover;background-position:center;border-radius:16px;padding:1.5rem;min-height:200px;box-shadow: inset 0 0 0 2000px rgba(0,0,0,0.35);color:white;}
-.stButton>button {background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border-radius:12px;font-weight:600;}
+.preview {background:#334155;border-radius:16px;padding:1.5rem;min-height:200px;color:white;}
+.stButton>button {background:linear-gradient(135deg,#9333ea,#4f46e5);color:white;border-radius:12px;font-weight:600;}
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------
 # HEADER
 # ------------------------------
-st.title("🧠 Expert PowerPoint Generator")
-st.caption("AI-ready • Data-driven • Project-based • Production architecture")
+st.title("🎨 Expert PPT Generator with Theme Engine")
+st.caption("Upload PPT themes • Auto theme suggestion • Smart generation")
 
 # ------------------------------
-# SIDEBAR – PROJECT MANAGER
+# SIDEBAR — THEME ENGINE
 # ------------------------------
-st.sidebar.header("📂 Project Manager")
+st.sidebar.header("🎨 Theme Engine")
 
-project_name = st.sidebar.text_input("Project Name", "My Presentation")
+theme_ppt = st.sidebar.file_uploader("Upload Theme PPT (.pptx)", type=["pptx"])
 
-if st.sidebar.button("💾 Save Project"):
-    st.session_state.projects[project_name] = st.session_state.slides.copy()
-    st.sidebar.success("Project saved")
+if theme_ppt:
+    theme_prs = Presentation(theme_ppt)
+    st.session_state.themes[theme_ppt.name] = theme_prs
+    st.sidebar.success(f"Theme '{theme_ppt.name}' loaded")
 
-if st.sidebar.button("📂 Load Project") and project_name in st.session_state.projects:
-    st.session_state.slides = st.session_state.projects[project_name].copy()
-    st.sidebar.success("Project loaded")
-
-st.sidebar.divider()
-
-# ------------------------------
-# SIDEBAR – THEME
-# ------------------------------
-st.sidebar.header("🎨 Theme Settings")
-bg_image = st.sidebar.file_uploader("Background Image", type=["png","jpg","jpeg"])
-font_color = st.sidebar.color_picker("Font Color", "#ffffff")
-
-# ------------------------------
-# MAIN LAYOUT
-# ------------------------------
-editor, preview = st.columns([2,1])
+if st.session_state.themes:
+    selected_theme = st.sidebar.selectbox(
+        "Select Theme",
+        list(st.session_state.themes.keys())
+    )
+else:
+    selected_theme = None
 
 # ------------------------------
 # SLIDE CREATOR
 # ------------------------------
-with editor:
-    st.subheader("➕ Create Slide")
-    slide_type = st.selectbox("Slide Type", ["Text","Bullet","Chart (CSV)"])
-    title = st.text_input("Slide Title")
-    content = st.text_area("Slide Content / Bullet")
+st.subheader("➕ Create Slide")
+slide_type = st.selectbox("Slide Type", ["Text","Bullet","Chart (CSV)"])
+title = st.text_input("Slide Title")
+content = st.text_area("Slide Content / Bullet")
+
+if slide_type == "Chart (CSV)":
+    csv_file = st.file_uploader("Upload CSV", type=["csv"])
+else:
     csv_file = None
-    if slide_type == "Chart (CSV)":
-        csv_file = st.file_uploader("Upload CSV", type=["csv"])
 
-    if st.button("Add Slide") and title:
-        st.session_state.slides.append({
-            "id": str(uuid.uuid4()),
-            "type": slide_type,
-            "title": title,
-            "content": content,
-            "csv": csv_file
-        })
+if st.button("Add Slide") and title:
+    st.session_state.slides.append({
+        "id": str(uuid.uuid4()),
+        "type": slide_type,
+        "title": title,
+        "content": content,
+        "csv": csv_file
+    })
 
 # ------------------------------
-# PREVIEW + REORDER
+# THEME SUGGESTION
 # ------------------------------
-with preview:
-    st.subheader("👀 Slide Preview")
+if st.session_state.slides:
+    recommended = suggest_theme(st.session_state.slides)
+    st.info(f"💡 Recommended theme type: **{recommended}**")
 
-    for i, slide in enumerate(st.session_state.slides):
-        st.markdown(f"""
-        <div class="card">
-            <div class="preview">
-                <h3 style="color:{font_color}">{slide['title']}</h3>
-                <p style="color:{font_color}">{slide['content'].replace(chr(10), '<br>')}</p>
-                <small>{slide['type']}</small>
-            </div>
+# ------------------------------
+# PREVIEW
+# ------------------------------
+st.subheader("👀 Slide Preview")
+for slide in st.session_state.slides:
+    st.markdown(f"""
+    <div class="card">
+        <div class="preview">
+            <h3>{slide['title']}</h3>
+            <p>{slide['content'].replace(chr(10), '<br>')}</p>
+            <small>{slide['type']}</small>
         </div>
-        """, unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
-        if col1.button("⬆️", key=f"up{slide['id']}") and i>0:
-            st.session_state.slides[i-1], st.session_state.slides[i] = st.session_state.slides[i], st.session_state.slides[i-1]
-        if col2.button("⬇️", key=f"down{slide['id']}") and i < len(st.session_state.slides)-1:
-            st.session_state.slides[i+1], st.session_state.slides[i] = st.session_state.slides[i], st.session_state.slides[i+1]
-        if col3.button("🗑️", key=f"del{slide['id']}"):
-            st.session_state.slides.pop(i)
-            st.rerun()
+    </div>
+    """, unsafe_allow_html=True)
 
 # ------------------------------
-# EXPORT PPT
+# EXPORT PPT USING THEME
 # ------------------------------
 if st.button("🚀 Export PowerPoint"):
-    prs = Presentation()
-
-    def add_bg(slide):
-        if bg_image:
-            slide.shapes.add_picture(io.BytesIO(bg_image.getvalue()), Inches(0), Inches(0), width=prs.slide_width, height=prs.slide_height)
+    if selected_theme:
+        prs = Presentation()
+        base_theme = st.session_state.themes[selected_theme]
+        prs.slide_width = base_theme.slide_width
+        prs.slide_height = base_theme.slide_height
+    else:
+        prs = Presentation()
 
     for slide_data in st.session_state.slides:
-        slide = prs.slides.add_slide(prs.slide_layouts[6])
-        add_bg(slide)
-        box = slide.shapes.add_textbox(Inches(1), Inches(1.5), Inches(8), Inches(4))
-        tf = box.text_frame
-        tf.text = slide_data['title']
-        tf.paragraphs[0].font.size = Pt(32)
-        tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+        if selected_theme:
+            slide = prs.slides.add_slide(base_theme.slide_layouts[1])
+        else:
+            slide = prs.slides.add_slide(prs.slide_layouts[6])
+
+        slide.shapes.title.text = slide_data['title']
 
         if slide_data['type'] == "Bullet":
+            tf = slide.placeholders[1].text_frame
             for line in slide_data['content'].split("\n"):
                 p = tf.add_paragraph()
                 p.text = line
@@ -148,11 +158,16 @@ if st.button("🚀 Export PowerPoint"):
             img.seek(0)
             slide.shapes.add_picture(img, Inches(1), Inches(2.5), Inches(6))
         else:
-            tf.add_paragraph().text = slide_data['content']
+            slide.placeholders[1].text = slide_data['content']
 
     buffer = io.BytesIO()
     prs.save(buffer)
     buffer.seek(0)
 
-    st.success("🎉 Expert-level PowerPoint created")
-    st.download_button("⬇️ Download PPT", buffer, file_name="expert_presentation.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+    st.success("🎉 PPT generated using selected theme")
+    st.download_button(
+        "⬇️ Download PPT",
+        buffer,
+        file_name="themed_expert_presentation.pptx",
+        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
