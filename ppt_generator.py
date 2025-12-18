@@ -4,45 +4,93 @@ from pptx.util import Inches, Pt
 import io
 
 # ==============================
-# Streamlit PowerPoint Generator App
+# Professional Streamlit PPT Generator
 # ==============================
 
-st.set_page_config(page_title="PPT Generator", layout="centered")
-
-st.title("📊 PowerPoint Generator App")
-st.write("Buat file PowerPoint (.pptx) secara otomatis menggunakan Python + Streamlit")
-
-# ------------------------------
-# User Inputs
-# ------------------------------
-title = st.text_input("Judul Presentasi", "Judul Presentasi")
-subtitle = st.text_input("Subjudul", "Nama / Institusi")
-
-st.subheader("Isi Slide")
-slide1_title = st.text_input("Judul Slide 1", "Pendahuluan")
-slide1_points = st.text_area(
-    "Bullet Points (pisahkan dengan enter)",
-    "Poin utama 1\nPoin utama 2\nPoin utama 3"
+st.set_page_config(
+    page_title="Professional PPT Generator",
+    page_icon="📊",
+    layout="wide"
 )
 
-slide2_title = st.text_input("Judul Slide 2", "Kesimpulan")
-slide2_content = st.text_area(
-    "Isi Slide 2",
-    "Ringkasan isi presentasi"
+# ------------------------------
+# Custom CSS
+# ------------------------------
+st.markdown(
+    """
+    <style>
+    .main {background-color: #f7f9fc;}
+    h1, h2, h3 {font-family: 'Segoe UI', sans-serif;}
+    .stButton>button {
+        background-color: #2563eb;
+        color: white;
+        border-radius: 10px;
+        padding: 0.6em 1.2em;
+        font-weight: 600;
+    }
+    .stDownloadButton>button {
+        background-color: #16a34a;
+        color: white;
+        border-radius: 10px;
+        padding: 0.6em 1.2em;
+        font-weight: 600;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
+
+# ------------------------------
+# Header
+# ------------------------------
+st.title("📊 Professional PowerPoint Generator")
+st.caption("Create clean, professional presentation slides instantly")
+
+# ------------------------------
+# Layout
+# ------------------------------
+left, right = st.columns([2, 1])
+
+with left:
+    st.subheader("📝 Presentation Content")
+
+    title = st.text_input("Presentation Title", "Your Presentation Title")
+    subtitle = st.text_input("Subtitle / Author", "Your Name or Organization")
+
+    slide1_title = st.text_input("Slide 1 Title", "Introduction")
+    slide1_points = st.text_area(
+        "Slide 1 Bullet Points",
+        "Key point one\nKey point two\nKey point three",
+        height=150
+    )
+
+    slide2_title = st.text_input("Slide 2 Title", "Conclusion")
+    slide2_content = st.text_area(
+        "Slide 2 Content",
+        "Summary and final thoughts",
+        height=120
+    )
+
+with right:
+    st.subheader("⚙️ Settings")
+
+    theme = st.selectbox("Theme", ["Default", "Business", "Minimal"])
+    font_size = st.slider("Base Font Size", 14, 32, 20)
+    include_cover = st.checkbox("Include Cover Slide", True)
 
 # ------------------------------
 # Generate PPT
 # ------------------------------
-if st.button("🚀 Generate PowerPoint"):
+if st.button("🚀 Generate Professional PPT"):
     prs = Presentation()
 
-    # Slide 1: Title
-    slide = prs.slides.add_slide(prs.slide_layouts[0])
-    slide.shapes.title.text = title
-    slide.placeholders[1].text = subtitle
+    # Cover Slide
+    if include_cover:
+        slide = prs.slides.add_slide(prs.slide_layouts[0])
+        slide.shapes.title.text = title
+        slide.placeholders[1].text = subtitle
 
-    # Slide 2: Bullet points
+    # Bullet Slide
     slide = prs.slides.add_slide(prs.slide_layouts[1])
     slide.shapes.title.text = slide1_title
     tf = slide.placeholders[1].text_frame
@@ -53,20 +101,20 @@ if st.button("🚀 Generate PowerPoint"):
         p.text = point
         p.level = 1
 
-    # Slide 3: Content
+    # Content Slide
     slide = prs.slides.add_slide(prs.slide_layouts[1])
     slide.shapes.title.text = slide2_title
     slide.placeholders[1].text = slide2_content
 
-    # Save to buffer
-    ppt_buffer = io.BytesIO()
-    prs.save(ppt_buffer)
-    ppt_buffer.seek(0)
+    # Save
+    buffer = io.BytesIO()
+    prs.save(buffer)
+    buffer.seek(0)
 
-    st.success("PowerPoint berhasil dibuat!")
+    st.success("🎉 Presentation created successfully!")
     st.download_button(
-        label="⬇️ Download PowerPoint",
-        data=ppt_buffer,
-        file_name="presentasi_otomatis.pptx",
+        "⬇️ Download PPT",
+        buffer,
+        file_name="professional_presentation.pptx",
         mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
     )
